@@ -1,0 +1,2 @@
+	{{#each notes}}<div class="vc-note vc-warn">{{this}}</div>{{/each}}
+	<p class="vc-muted">Array data from HPE GreenLake Data Services (DSCC), read {{asOf}} ({{arraysIndexed}} storage systems, {{volumesIndexed}} volumes). LUNs are matched by WWN or serial number.<br>dscc-morpheus is an unofficial community plugin, not an HPE product and not supported by HPE.</p>

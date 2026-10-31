@@ -1,0 +1,28 @@
+{{#if isNoLuns}}<div class="vc-note">This host sees no HPE array LUNs ({{otherLuns}} other SAN or local disks).<br>
+<span class="vc-muted">What Morpheus lists for this host ({{devicesCount}} devices): <code>{{devicesSeen}}</code></span></div>{{/if}}
+{{#if isHost}}
+	<div class="vc-chips">
+		<span class="vc-chip">Array LUNs on this host: {{totals.luns}} ({{totals.matched}} in DSCC)</span>
+		{{#if totals.attention}}<span class="vc-chip vc-warn"><span class="vc-dot"></span>Needing attention: {{totals.attention}}</span>{{/if}}
+		{{#if totals.vmDisks}}<span class="vc-chip">Disks of VMs running here: {{totals.vmDisks}}</span>{{/if}}
+		{{#if totals.unused}}<span class="vc-chip">Not linked in Morpheus: {{totals.unused}}</span>{{/if}}
+		{{#if otherLuns}}<span class="vc-chip vc-muted">Other disks: {{otherLuns}}</span>{{/if}}
+	</div>
+	<table>
+		<tr><th>LUN</th><th>Used by</th><th>Array</th><th>Array volume</th><th class="vc-num">Size</th><th class="vc-num" title="Physical space used on the array, after thin provisioning and data reduction">Used on array</th><th>State</th><th>Seen by hosts</th><th></th></tr>
+		{{#each rows}}
+		<tr>
+			<td class="vc-lun"><code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></td>
+			<td>{{usedBy}}</td>
+			<td>{{#if matched}}<span class="vc-{{arrayLevel}}"><span class="vc-dot"></span></span>{{array}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
+			<td>{{#if matched}}{{volume}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
+			<td class="vc-num">{{size}}</td>
+			<td class="vc-num">{{#if matched}}{{used}}{{#if usedPct}} ({{usedPct}}%){{/if}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
+			<td class="vc-{{statusLevel}}"><span class="vc-dot"></span>{{statusText}}</td>
+			<td class="vc-{{seenLevel}}"><span class="vc-dot"></span>{{seenOn}}</td>
+			<td>{{#if volumeUrl}}<a href="{{volumeUrl}}" class="vc-link" target="_blank" rel="noopener noreferrer">Open in DSCC &#8599;</a>{{/if}}</td>
+		</tr>
+		{{/each}}
+	</table>
+	{{#if totals.vmDisks}}<p class="vc-muted">Morpheus doesn't list a running VM's integration LUNs among its host's devices, so they're added here from the VMs running on this host ("VM runs here").</p>{{/if}}
+	{{#if totals.unused}}<p class="vc-muted">"Not linked to a VM or datastore in Morpheus" means Morpheus has no VM disk or datastore record for that LUN. It may still be used outside Morpheus, or be left over from a deleted VM. "Used on array" can read 0 B even for a busy VM disk, so it doesn't tell you either way: check in DSCC before reclaiming anything.</p>{{/if}}

@@ -1,0 +1,3 @@
+{{#if isUnconfigured}}<div class="vc-note">The dscc-morpheus plugin has no DSCC API client yet. An administrator can add one in Administration &gt; Integrations &gt; Plugins &gt; dscc-morpheus.</div>{{/if}}
+{{#if isBuilding}}<div class="vc-note">Reading the storage arrays and volumes from HPE GreenLake Data Services. This takes up to a minute the first time. Reopen this tab shortly.</div>{{/if}}
+{{#if isError}}<div class="vc-note vc-bad"><strong>Couldn't load HPE storage data from DSCC.</strong><br>{{error}}</div>{{/if}}

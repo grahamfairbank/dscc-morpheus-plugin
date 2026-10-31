@@ -1,0 +1,57 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Please redact real data** before posting: WWNs, array serial numbers, IP addresses, array/volume/host/tenant/cluster names, GreenLake workspace or API client IDs, tokens. Use solid boxes on screenshots, not blur.
+        This is an unofficial community project. Please don't contact HPE support about it.
+  - type: input
+    id: plugin
+    attributes:
+      label: Plugin version and jar
+      placeholder: "0.1.5, dscc-morpheus-plugin-0.1.5.jar"
+    validations:
+      required: true
+  - type: input
+    id: morpheus
+    attributes:
+      label: Morpheus / VM Essentials version
+      placeholder: "9.0.1"
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Array model and OS version
+      placeholder: "Alletra Storage MP B10120, 10.6.0"
+  - type: input
+    id: region
+    attributes:
+      label: DSCC region
+      placeholder: "us1 / eu1 / jp1"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: What does the HPE Storage tab show? Include the message text if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines (redacted)
+      description: "From the Morpheus log, lines containing `dscc-morpheus:` (/var/log/morpheus/morpheus-ui/current)."
+      render: text
+  - type: checkboxes
+    id: redacted
+    attributes:
+      label: Redaction
+      options:
+        - label: I have removed WWNs, serial numbers, addresses, names, IDs and tokens from everything above.
+          required: true

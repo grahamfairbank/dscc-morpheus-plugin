@@ -1,0 +1,92 @@
+{{#if isNoLuns}}<div class="vc-note">No HPE array LUNs found for this cluster: its hosts and datastores use no 3PAR, Primera, Alletra or Nimble volumes that the plugin can see.</div>{{/if}}
+{{#if isCluster}}
+	<div class="vc-chips">
+		<span class="vc-chip">Hosts: {{totals.hosts}}</span>
+		<span class="vc-chip">Array LUNs: {{totals.luns}} ({{totals.matched}} in DSCC)</span>
+		<span class="vc-chip">Arrays: {{totals.arrays}}</span>
+		{{#if totals.arraysAttention}}<span class="vc-chip vc-warn"><span class="vc-dot"></span>Arrays needing attention: {{totals.arraysAttention}}</span>{{/if}}
+		<span class="vc-chip">GFS2 datastores on array LUNs: {{totals.datastores}}</span>
+		{{#if totals.integratedDisks}}<span class="vc-chip">Alletra B10000 Integration disks: {{totals.integratedDisks}}</span>{{/if}}
+		{{#if partialCount}}<span class="vc-chip vc-warn"><span class="vc-dot"></span>LUNs not seen by every host: {{partialCount}}</span>{{/if}}
+		{{#if unmatchedCount}}<span class="vc-chip vc-warn"><span class="vc-dot"></span>Not in DSCC: {{unmatchedCount}}</span>{{/if}}
+		{{#if unclaimedCount}}<span class="vc-chip vc-warn"><span class="vc-dot"></span>On hosts, not linked in Morpheus: {{unclaimedCount}}</span>{{/if}}
+	</div>
+
+	<h4 class="vc-sub">Arrays</h4>
+	<table>
+		<tr><th>Array</th><th>Model</th><th>OS</th><th>Health</th><th class="vc-num">Capacity used</th><th class="vc-num" title="Data reduction (deduplication and compression) across the array">Data reduction</th><th class="vc-num">LUNs used here</th><th></th></tr>
+		{{#each arrays}}
+		<tr>
+			<td>{{name}}{{#if note}}<br><span class="vc-muted">{{note}}</span>{{/if}}</td>
+			<td>{{model}}</td><td>{{version}}</td>
+			<td class="vc-{{level}}"><span class="vc-dot"></span>{{state}}</td>
+			<td class="vc-num">{{used}} of {{total}}{{#if usedPct}} ({{usedPct}}%){{/if}}</td>
+			<td class="vc-num">{{reduction}}</td>
+			<td class="vc-num">{{luns}}</td>
+			<td>{{#if url}}<a href="{{url}}" class="vc-link" target="_blank" rel="noopener noreferrer">Open in DSCC &#8599;</a>{{/if}}</td>
+		</tr>
+		{{/each}}
+	</table>
+
+	{{#if datastores}}
+	<h4 class="vc-sub">GFS2 datastores</h4>
+	<table>
+		<tr><th>Datastore</th><th>LUN</th><th>Array</th><th>Array volume</th><th class="vc-num">Volume size</th><th class="vc-num">Datastore used</th><th>Volume state</th><th>Seen by hosts</th><th></th></tr>
+		{{#each datastores}}
+		<tr>
+			<td>{{datastore}}</td>
+			<td class="vc-lun"><code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></td>
+			<td>{{#if matched}}<span class="vc-{{arrayLevel}}"><span class="vc-dot"></span></span>{{array}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
+			<td>{{#if matched}}{{volume}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
+			<td class="vc-num">{{size}}</td>
+			<td class="vc-num">{{dsFree}} free of {{dsSize}}{{#if dsUsedPct}} ({{dsUsedPct}}% used){{/if}}</td>
+			<td class="vc-{{statusLevel}}"><span class="vc-dot"></span>{{statusText}}</td>
+			<td class="vc-{{seenLevel}}"><span class="vc-dot"></span>{{seenOn}}</td>
+			<td>{{#if volumeUrl}}<a href="{{volumeUrl}}" class="vc-link" target="_blank" rel="noopener noreferrer">Open in DSCC &#8599;</a>{{/if}}</td>
+		</tr>
+		{{/each}}
+	</table>
+	{{/if}}
+
+	{{#if integrated}}
+	<h4 class="vc-sub">HPE Alletra B10000 Integration <span class="vc-muted">(one LUN per VM disk)</span></h4>
+	<table>
+		<tr><th>Morpheus datastore</th><th class="vc-num">Disks</th><th class="vc-num">VMs</th><th class="vc-num">Provisioned</th><th class="vc-num">In DSCC</th><th>Array</th></tr>
+		{{#each integrated}}
+		<tr><td>{{datastore}}</td><td class="vc-num">{{disks}}</td><td class="vc-num">{{vms}}</td><td class="vc-num">{{size}}</td>
+			<td class="vc-num">{{matched}}{{#if unmatched}} <span class="vc-muted">({{unmatched}} not found)</span>{{/if}}</td><td>{{arrays}}</td></tr>
+		{{/each}}
+	</table>
+	<p class="vc-muted">Each VM's own <strong>HPE Storage</strong> tab lists its disks and their array volumes.</p>
+	{{/if}}
+
+	{{#if partial}}
+	<details{{#if partialFew}} open{{/if}}><summary><strong>Array LUNs not seen by every host ({{partialCount}})</strong></summary>
+	<table>
+		<tr><th>LUN</th><th>Array volume</th><th>Used by</th><th>Seen by hosts</th></tr>
+		{{#each partial}}<tr><td class="vc-lun"><code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></td><td>{{#if matched}}{{volume}} ({{array}}){{else}}<span class="vc-muted">not in DSCC</span>{{/if}}</td><td>{{usedBy}}</td><td class="vc-warn"><span class="vc-dot"></span>{{seenOn}}</td></tr>{{/each}}
+	</table>
+	</details>
+	{{/if}}
+
+	{{#if unclaimed}}
+	<details><summary><strong>Array LUNs on the hosts that Morpheus doesn't link to a VM or datastore ({{unclaimedCount}})</strong></summary>
+	<p class="vc-muted">Volumes presented to this cluster's hosts for which Morpheus has no VM disk or datastore record (in this cluster's tenant). That doesn't prove they're unused: they may be used outside Morpheus, by VMs in another tenant, or be left over from deleted VMs. "Used on array" can read 0 B even for a busy VM disk, so it doesn't tell you either way. Check each one in DSCC before reclaiming anything.</p>
+	<table>
+		<tr><th>LUN</th><th>Array</th><th>Array volume</th><th class="vc-num">Size</th><th class="vc-num">Used on array</th><th>Seen by hosts</th><th></th></tr>
+		{{#each unclaimed}}<tr><td class="vc-lun"><code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></td><td>{{array}}</td><td>{{volume}}</td><td class="vc-num">{{size}}</td><td class="vc-num">{{used}}</td><td>{{seenOn}}</td><td>{{#if volumeUrl}}<a href="{{volumeUrl}}" class="vc-link" target="_blank" rel="noopener noreferrer">Open in DSCC &#8599;</a>{{/if}}</td></tr>{{/each}}
+	</table>
+	{{#if unclaimedMore}}<p class="vc-muted">Showing the first 100.</p>{{/if}}
+	</details>
+	{{/if}}
+
+	{{#if unmatched}}
+	<details><summary><strong>HPE array LUNs that DSCC doesn't list as volumes ({{unmatchedCount}})</strong></summary>
+	<p class="vc-muted">Usually exported snapshots (for example from a backup product) or LUNs removed from the array that hosts still have paths to.</p>
+	<table>
+		<tr><th>LUN</th><th>Used by</th><th>Seen by hosts</th></tr>
+		{{#each unmatched}}<tr><td class="vc-lun"><code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></td><td>{{usedBy}}</td><td>{{seenOn}}</td></tr>{{/each}}
+	</table>
+	{{#if unmatchedMore}}<p class="vc-muted">Showing the first 50.</p>{{/if}}
+	</details>
+	{{/if}}

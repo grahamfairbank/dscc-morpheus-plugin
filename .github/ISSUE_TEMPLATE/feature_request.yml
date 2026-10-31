@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a new view or improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas and pull requests are welcome. The plugin is read-only by design; if your idea writes to an array or to Morpheus, please describe how it should be protected.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Which DSCC data or job would it use? Who should be allowed to use it?
+  - type: dropdown
+    id: pr
+    attributes:
+      label: Would you like to contribute a pull request?
+      options:
+        - "Yes"
+        - "Maybe, with guidance"
+        - "No"

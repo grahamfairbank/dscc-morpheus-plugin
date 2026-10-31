@@ -1,0 +1,26 @@
+build/
+.gradle/
+.idea/
+*.iml
+out/
+plugins/
+.DS_Store
+dist/
+upload/
+
+# Local working notes and spike output (never published: real WWNs, serials, workspace ids)
+docs/HLD.md
+docs/HLD.pdf
+docs/bug-reports/
+spike/
+CLAUDE.md
+
+# Spike/diagnostic check scripts stay local (owner, 2026-10-29): spike/morpheus-lun-check.py, spike/dscc-api-check.py
+tools/morpheus-lun-check.py
+tools/dscc-api-check.py
+
+# Raw production screenshots from the owner: never committed (redacted copies go to docs/images)
+screenshots/
+
+# Blog drafts stay local (owner, 2026-10-30)
+docs/blog/
