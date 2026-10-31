@@ -15,7 +15,7 @@
 			<td>{{disk}} <span class="vc-muted">{{device}}</span></td>
 			<td class="vc-num">{{diskSize}}</td>
 			<td>{{kindText}}{{#if datastoreUse}}<br><span class="vc-muted">{{datastoreUse}}</span>{{/if}}</td>
-			<td class="vc-lun">{{#if lunId}}<code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>{{else}}<span class="vc-muted">--</span>{{/if}}</td>
+			<td class="vc-lun">{{#if lunId}}<code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"></button>{{else}}<span class="vc-muted">--</span>{{/if}}</td>
 			<td>{{#if matched}}<span class="vc-{{arrayLevel}}"><span class="vc-dot"></span></span>{{array}} <span class="vc-muted">({{arrayState}})</span>{{else}}<span class="vc-muted">--</span>{{/if}}</td>
 			<td>{{#if matched}}{{volume}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
 			<td class="vc-num">{{#if matched}}{{size}} / {{used}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0 (2026-10-31)
+
+Tested on Morpheus 9.0.1.
+
+Faster pages. Measured on a Morpheus 9.0.1 appliance, Morpheus's own reads cost the most (about 1 s per server, 3 s per instance, 10 to 13 s to list a cluster's VMs), and Morpheus runs every tab's check and the tab itself on each page load, whether or not the tab is opened.
+
+- **Host, VM and instance pages:** the tab check and the tab now share one read of the server or instance (for 15 seconds), instead of reading it twice. That's about 1 s less on each host and VM page, and about 3 s less on each instance page.
+- **Cluster pages:** deciding whether to show the tab reads only the cluster's hosts and datastores, not its VMs. The VMs (the slow part) are read once a minute for the tab itself. When several people open the same cluster at once, the plugin reads it once for all of them. For people who view a cluster often, its Morpheus data is refreshed in the background shortly before it expires, so they don't wait for it. That data is never older than before: at most 60 seconds, the same as in 0.1.8.
+- **No more useless reloads:** the plugin no longer reloads disks or servers that Morpheus already returned in full (measured: those reloads never added anything).
+- **Fewer DSCC bytes, faster refreshes:** volume lists ask DSCC only for the fields the plugin uses (measured: about 8 to 10 times faster per call). If DSCC refuses a field name for an array family, or its answer lacks the volume ids, states or sizes, the plugin reads that family the old way from then on and logs it once. Any other refusal makes it read the old way for an hour, then try again.
+- A cluster whose owner tenant Morpheus doesn't give the plugin now gets no tab for anyone (before, a master-tenant user could see its datastore LUNs).
+- **One failing array no longer blanks its LUNs.** If one array's volumes can't be read, the tabs keep that array's volumes from the previous read, with a note saying how old they are. If DSCC answers "too many requests" (HTTP 429), the read stops at once, keeps the previous data, and waits as long as DSCC asks (`Retry-After` or `ratelimit-reset`, at least a minute and at most 15 minutes).
+- **The first viewer starts the DSCC read.** After a restart or a settings change, the first tab check that passes starts reading DSCC, so the tab has data sooner.
+- The five-minute refresh is counted from the end of a read, so a slow read isn't repeated at once. After a read stopped by the 10-minute limit, the next one waits five minutes.
+- After a settings change, a read still running for the old settings stops and can't mark the new connection as failed.
+- The array volume's pool (CPG) is read from the fields DSCC actually has (no tab shows it yet).
+- Smaller host tabs: the copy-button icon is drawn once in the tab's style instead of in every row.
+
 ## 0.1.8 (2026-10-31)
 
 Security hardening after an independent security review. No exploitable issue was found in the plugin; these changes tighten the defaults and the edges.

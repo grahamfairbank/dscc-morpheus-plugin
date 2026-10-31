@@ -3,15 +3,21 @@ package io.github.grahamfairbank.dsccmorpheus
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import java.util.regex.Pattern
 
 /** A DSCC call that failed. The message is safe to show to users (no secrets, short). */
 class DsccException extends RuntimeException {
 	final int status
+	/** DSCC's errorCode (for example ERR_INVALID_KEY), for the plugin's own decisions; never shown. */
+	final String errorCode
 
-	DsccException(String message, int status = 0) {
+	DsccException(String message, int status = 0, String errorCode = null) {
 		super(message)
 		this.status = status
+		this.errorCode = errorCode
 	}
 
 	boolean isNotFound() { status == 404 }
@@ -22,6 +28,21 @@ class DsccBudgetException extends DsccException {
 	DsccBudgetException(String message) { super(message) }
 }
 
+/** DSCC answered HTTP 429. Stops the whole build (DsccIndex keeps nothing half-read); retryAfterMs is from its headers. */
+class DsccRateLimitException extends DsccException {
+	final Long retryAfterMs
+
+	DsccRateLimitException(String message, Long retryAfterMs) {
+		super(message, 429)
+		this.retryAfterMs = retryAfterMs
+	}
+}
+
+/** The client was replaced (settings changed) while its build ran: the rest of that build is skipped. */
+class DsccStoppedException extends DsccBudgetException {
+	DsccStoppedException() { super('The plugin settings changed, so this DSCC read stopped.') }
+}
+
 /**
  * Read-only HPE GreenLake Data Services (DSCC) storage API client. GET only.
  *
@@ -29,6 +50,10 @@ class DsccBudgetException extends DsccException {
  *   is tried first next time. Tokens are reused until a minute before expiry (workspace tokens last 15 minutes).
  * - Every list call sends both limit and offset: DSCC answers HTTP 400 otherwise (measured 2026-10-29).
  * - GET responses are cached per path for the TTL the caller gives. 401 drops the token and retries once.
+ * - Volume lists ask only for the fields the index reads (select). One unknown key makes DSCC refuse the whole
+ *   request (HTTP 400 ERR_INVALID_KEY, measured 2026-10-31), so a family whose select is refused that way is read
+ *   without it for the life of this client. Another 400 that only happens with select, or a selected page that
+ *   looks wrong (no device ids, no states, or on device-type4 no sizes), is read again without select.
  */
 @Slf4j
 class DsccClient {
@@ -39,12 +64,38 @@ class DsccClient {
 	/** device-type1: 3PAR, Primera, Alletra 9000. device-type2: Nimble, Alletra 5000/6000. device-type4: Alletra MP B10000. */
 	static final List<Integer> FAMILIES = [1, 2, 4]
 
+	/**
+	 * Fields of each family's volume list that DsccIndex reads, checked against storage-api.json (2026-10-31).
+	 * device-type4 has no top-level sizeMiB/usedSizeMiB: its sizes are in volumeCapacity. device-type1 has no
+	 * volumeCapacity. Measured: select makes these reads about 8 to 10 times faster.
+	 */
+	static final Map<Integer, String> VOLUME_SELECT = [
+		1: 'id,name,wwn,sizeMiB,usedSizeMiB,state,userCpgName,snapshotCpgName,consoleUri',
+		4: 'id,name,wwn,volumeCapacity.sizeMiB,volumeCapacity.usedSizeMiB,state,userCpgName,usrCpgShortName,consoleUri',
+		2: 'id,name,serial_number,size,total_usage_bytes,vol_usage_compressed_bytes,vol_state,online,offline_reason,space_usage_level,pool_name,consoleUri'
+	].asImmutable()
+
+	/** The longest wait a 429 can ask for before the next index read. */
+	static final long MAX_RETRY_AFTER_MS = 15L * 60_000L
+	private static final Pattern API_PREFIX = Pattern.compile('^/api/v1')
+	private static final Pattern QUERY = Pattern.compile('\\?.*$')
+	private static final Pattern SPACES = Pattern.compile('\\s+')
+
 	final DsccSettings settings
 	private final DsccTransport transport
 	private final Closure<Long> clock
 
 	/** While an index build runs: the time (clock ms) after which DSCC calls stop. 0 = no limit. */
 	volatile long deadline = 0L
+	/** Set when settings change: every later call of this client fails at once. */
+	volatile boolean stopped = false
+	/** Families whose volume list is read without select (DSCC refused it). */
+	private final Set<Integer> noSelect = ConcurrentHashMap.newKeySet()
+	/** Families whose select failed in another way: read without it until then (clock ms). */
+	private final Map<Integer, Long> selectPausedUntil = new ConcurrentHashMap<>()
+	/** How long a select failure other than ERR_INVALID_KEY turns select off for a family. */
+	static final long SELECT_PAUSE_MS = 60L * 60_000L
+	private static final Pattern ERROR_CODE = Pattern.compile('"errorCode"\\s*:\\s*"([A-Z0-9_]{1,64})"')
 
 	private String token
 	private long tokenExpiresAt
@@ -77,7 +128,71 @@ class DsccClient {
 	/** device-type2 only. */
 	List<Map> healthStatus(String id, long ttlMs) { listAll("${BASE}/storage-systems/device-type2/${enc(id)}/health-status", ttlMs) }
 
-	List<Map> volumes(int family, String id, long ttlMs) { listAll("${BASE}/storage-systems/device-type${family}/${enc(id)}/volumes", ttlMs) }
+	/**
+	 * A system's volumes, with select. Read again without select when DSCC answers a select with HTTP 400 that goes
+	 * away without it, or when the selected page has items but none with a device id, none with a state, or (device-
+	 * type4) none with a size, while the page without select has them.
+	 */
+	List<Map> volumes(int family, String id, long ttlMs) {
+		String path = "${BASE}/storage-systems/device-type${family}/${enc(id)}/volumes".toString()
+		String select = usesSelect(family) ? VOLUME_SELECT[family] : null
+		if (!select) return listAll(path, ttlMs)
+		List<Map> items
+		try {
+			items = listAll("${path}?select=${select}".toString(), ttlMs)   // keys are fixed: commas sent as is, as measured
+		} catch (DsccException e) {
+			if (e.status != 400) throw e
+			List<Map> plain = listAll(path, ttlMs)   // throws again when select wasn't the problem
+			if (e.errorCode == 'ERR_INVALID_KEY') selectRefused(family, 'DSCC refused a field name (ERR_INVALID_KEY)')
+			else selectPaused(family, "DSCC answered it with HTTP 400${e.errorCode ? " ${e.errorCode}" : ''}")
+			return plain
+		}
+		String wrong = selectedPageProblem(family, items)
+		if (wrong) {
+			List<Map> plain = listAll(path, ttlMs)
+			if (!selectedPageProblem(family, plain)) selectRefused(family, wrong)   // else the data is like that: not select's fault
+			return plain
+		}
+		return items
+	}
+
+	boolean usesSelect(int family) {
+		if (noSelect.contains(family)) return false
+		Long until = selectPausedUntil[family]
+		return until == null || (clock.call() as long) >= until
+	}
+
+	private void selectRefused(int family, String why) {
+		if (noSelect.add(family)) log.info("dscc-morpheus: reading device-type${family} volumes without select from now on: ${why}")
+	}
+
+	private void selectPaused(int family, String why) {
+		long now = clock.call() as long
+		Long before = selectPausedUntil.put(family, now + SELECT_PAUSE_MS)
+		if (before == null || before <= now) log.info("dscc-morpheus: reading device-type${family} volumes without select for an hour: ${why}")
+	}
+
+	/** Why a selected page can't be right (null when it looks fine): no item has a device id, a state or (dt4) a size. */
+	static String selectedPageProblem(int family, List<Map> items) {
+		if (!items) return null
+		if (!items.any { family == 2 ? it.serial_number : it.wwn }) return 'its answers had no device ids'
+		if (!items.any { family == 2 ? (it.vol_state != null || it.online != null) : overallState(it) != null }) return 'its answers had no volume states'
+		if (family == 4 && !items.any { mp4Size(it) != null }) return 'its answers had no volume sizes'
+		return null
+	}
+
+	private static Object overallState(Map v) {
+		Object st = v?.state
+		return st instanceof Map ? ((Map) st).overall : st
+	}
+
+	private static Object mp4Size(Map v) {
+		Object cap = v?.volumeCapacity
+		return (cap instanceof Map ? ((Map) cap).sizeMiB : null) ?: v?.sizeMiB
+	}
+
+	/** Stops this client: its running build ends at its next DSCC call. */
+	void stop() { stopped = true }
 
 	// ---- plumbing -------------------------------------------------------------------------------
 
@@ -112,6 +227,7 @@ class DsccClient {
 		CacheEntry hit = cache[pathAndQuery]
 		if (hit && ttlMs > 0 && now - hit.at < ttlMs) return hit.data
 
+		if (stopped) throw new DsccStoppedException()
 		if (deadline > 0L && now > deadline) {
 			throw new DsccBudgetException('Reading DSCC took longer than ' +
 				"${DsccService.INDEX_BUILD_BUDGET_MS.intdiv(60_000L)} minutes, so the plugin stopped this read.")
@@ -192,13 +308,37 @@ class DsccClient {
 		}
 		if (r.status == 403) return new DsccException("${what}: the DSCC API client doesn't have permission (HTTP 403)", 403)
 		if (r.status == 404) return new DsccException("${what}: not found in DSCC (HTTP 404)", 404)
-		if (r.status == 429) return new DsccException("${what}: rate limited by DSCC (HTTP 429), try again shortly", 429)
+		if (r.status == 429) {
+			Long wait = retryAfterMs(r)
+			log.warn("dscc-morpheus: ${what}: rate limited by DSCC (HTTP 429)${wait != null ? ", next read in ${wait.intdiv(1000L)} s" : ''}")
+			return new DsccRateLimitException("${what}: rate limited by DSCC (HTTP 429), the plugin tries again later", wait)
+		}
 		// DSCC's response body can hold internal detail: log it, don't return it.
-		log.warn("dscc-morpheus: ${what}: HTTP ${r.status} ${body.replaceAll('\\s+', ' ').take(500)}")
-		return new DsccException("${what}: HTTP ${r.status}. Details are in the Morpheus log.", r.status)
+		log.warn("dscc-morpheus: ${what}: HTTP ${r.status} ${SPACES.matcher(body).replaceAll(' ').take(500)}")
+		java.util.regex.Matcher code = ERROR_CODE.matcher(body)
+		return new DsccException("${what}: HTTP ${r.status}. Details are in the Morpheus log.", r.status, code.find() ? code.group(1) : null)
 	}
 
-	private static String shortPath(String p) { p.replaceFirst('^/api/v1', '').replaceFirst('\\?.*$', '') }
+	/**
+	 * How long a 429 asks to wait: Retry-After (seconds or an HTTP date), else GreenLake's ratelimit-reset
+	 * (seconds until the limit resets). Null when neither is there or readable; capped at MAX_RETRY_AFTER_MS.
+	 */
+	Long retryAfterMs(HttpResult r) {
+		Long ms = null
+		String ra = r.header('Retry-After')?.trim()
+		if (ra) {
+			if (ra ==~ /\d{1,9}/) ms = (ra as long) * 1000L
+			else {
+				try { ms = ZonedDateTime.parse(ra, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() - (clock.call() as long) } catch (Exception ignored) { }
+			}
+		}
+		String reset = r.header('ratelimit-reset')?.trim()
+		if (ms == null && reset ==~ /\d{1,9}/) ms = (reset as long) * 1000L
+		if (ms == null) return null
+		return Math.min(Math.max(0L, ms), MAX_RETRY_AFTER_MS)
+	}
+
+	private static String shortPath(String p) { QUERY.matcher(API_PREFIX.matcher(p).replaceFirst('')).replaceFirst('') }
 
 	private static String hostOf(String url) {
 		try { return new URI(url).host } catch (Exception ignored) { return url }

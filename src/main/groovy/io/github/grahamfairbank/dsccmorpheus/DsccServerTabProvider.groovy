@@ -40,16 +40,22 @@ class DsccServerTabProvider extends AbstractServerTabProvider {
 		if (!(s.configured && DsccMorpheusPlugin.canView(s, user))) return false
 		try {
 			MorpheusReader r = plugin.reader()
-			// The server passed in can be bare (no owner, type or volumes): decide on the full record.
-			ComputeServer s1 = r.full(server)
+			// The server passed in can be bare (no owner, type or volumes): decide on the full record, loaded by id
+			// (fullServer keeps it for the render that follows; the tenant check below runs on every call).
+			ComputeServer s1 = plugin.fullServer(r, server)
 			Long owner = MorpheusReader.ownerOf(s1)
 			if (!MorpheusReader.mayViewPage(owner, MorpheusReader.viewer(user, account))) return plugin.hidden("server ${server.id}", "tenant (owner ${owner}, viewer ${MorpheusReader.safe { MorpheusReader.viewer(user, account)?.id }})")
-			if (s.showAlways) return true
-			if (MorpheusReader.isHost(s1)) {
-				HostFacts h = r.host(s1)
-				return h.luns.any { WwnMatcher.isHpeArray(it.deviceId as String) } ?: plugin.hidden("host ${server.id}", "no HPE array LUN among ${h.devices.size()} devices")
+			boolean shown
+			if (s.showAlways) {
+				shown = true
+			} else if (MorpheusReader.isHost(s1)) {
+				HostFacts h = plugin.hostOf(r, s1)
+				shown = h.luns.any { WwnMatcher.isHpeArray(it.deviceId as String) } ?: plugin.hidden("host ${server.id}", "no HPE array LUN among ${h.devices.size()} devices")
+			} else {
+				shown = plugin.anyArrayDisk([plugin.guestOf(r, s1)]) ?: plugin.hidden("VM ${server.id}", 'no disk on an HPE array LUN')
 			}
-			return plugin.anyArrayDisk([r.guest(s1)]) ?: plugin.hidden("VM ${server.id}", 'no disk on an HPE array LUN')
+			if (shown) plugin.warmIndex(s)
+			return shown
 		} catch (Throwable e) {
 			log.warn("dscc-morpheus: server tab check for ${server.id} failed: ${e}")
 			return false
@@ -63,14 +69,14 @@ class DsccServerTabProvider extends AbstractServerTabProvider {
 		String template
 		try {
 			MorpheusReader r = plugin.reader()
-			server = r.full(server)
+			server = plugin.fullServer(r, server)
 			if (MorpheusReader.isHost(server)) {
 				template = 'hbs/dscc-host'
 				model = plugin.service.hostTab(server.name, { hostFacts(r, server) }, s)
 			} else {
 				template = 'hbs/dscc-guest'
 				model = plugin.service.guestTab(server.name, {
-					List<GuestFacts> g = [r.guest(server)]
+					List<GuestFacts> g = [plugin.guestOf(r, server)]
 					[guests: g, datastores: plugin.datastoresFor(g)]
 				}, s)
 			}
@@ -85,7 +91,7 @@ class DsccServerTabProvider extends AbstractServerTabProvider {
 
 	/** This host, plus its cluster's hosts, datastores and VMs (for "seen on" and "used by"). */
 	Map hostFacts(MorpheusReader r, ComputeServer server) {
-		HostFacts me = r.host(server)
+		HostFacts me = plugin.hostOf(r, server)
 		ComputeServerGroup cluster = server.serverGroup
 		if (cluster?.id != null) {
 			Map f = plugin.clusterFacts(cluster)

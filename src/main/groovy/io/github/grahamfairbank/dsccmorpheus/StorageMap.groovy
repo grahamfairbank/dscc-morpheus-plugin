@@ -96,7 +96,7 @@ class StorageMap {
 					usedByKind: 'vm', seenOn: 'VM runs here', seenLevel: 'ok', vmDisk: true]
 			}
 		}
-		rows = (rows + vmRows.unique { it.lunId }).sort { x, y -> (rank(x) <=> rank(y)) ?: ((x.usedBy as String) <=> (y.usedBy as String)) }
+		rows = (rows + firstPerLun(vmRows)).sort { x, y -> (rank(x) <=> rank(y)) ?: ((x.usedBy as String) <=> (y.usedBy as String)) }
 		int other = h.luns.count { !WwnMatcher.isHpeArray(it.deviceId as String) } as int
 		return [state: rows ? 'host' : 'noLuns', hostName: h.name, rows: rows, otherLuns: other,
 		        devicesSeen: h.devices.take(20).join(', ') ?: 'none', devicesCount: h.devices.size(),
@@ -211,8 +211,18 @@ class StorageMap {
 
 	static Map<String, Integer> seenCounts(List<HostFacts> hosts) {
 		Map<String, Integer> seen = [:].withDefault { 0 }
-		(hosts ?: []).each { h -> h.luns*.deviceId.unique().each { seen[it as String]++ } }
+		(hosts ?: []).each { h ->
+			Set<String> once = new HashSet<>()   // each host counts a LUN once (Groovy's unique() is quadratic)
+			h.luns.each { Map l -> String id = l.deviceId as String; if (once.add(id)) seen[id]++ }
+		}
 		return seen
+	}
+
+	/** The first row per LUN id, in order (vmRows can be long on a busy host). */
+	static List<Map> firstPerLun(List<Map> rows) {
+		Map<String, Map> out = new LinkedHashMap<>()
+		rows.each { Map r -> out.putIfAbsent(r.lunId as String, r) }
+		return new ArrayList<Map>(out.values())
 	}
 
 	static Map totals(List<Map> rows) {

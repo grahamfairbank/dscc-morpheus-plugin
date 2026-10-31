@@ -73,6 +73,57 @@ class MorpheusReaderSpec extends Specification {
 		r.instanceServers(new com.morpheusdata.model.Instance(id: 9L))*.name == ['host-a']
 	}
 
+	def "complete records are not reloaded: a bare volume with a type, a full server with no volumes"() {
+		given:
+		int volumeGets = 0
+		int serverGets = 0
+		def volumes = Mock(com.morpheusdata.core.synchronous.MorpheusSynchronousStorageVolumeService) {
+			get(_) >> { Long id -> volumeGets++; new StorageVolume(id: id, name: 'reloaded', wwn: Fixtures.WWN_VM1.toLowerCase()) }
+		}
+		def servers = Mock(com.morpheusdata.core.synchronous.compute.MorpheusSynchronousComputeServerService) {
+			get(_) >> { Long id -> serverGets++; new ComputeServer(id: id, name: 'loaded', computeServerType: new ComputeServerType(code: 'mvmVm'), volumes: []) }
+		}
+		def services = Mock(com.morpheusdata.core.MorpheusServices) { getStorageVolume() >> volumes; getComputeServer() >> servers }
+		MorpheusReader r = new MorpheusReader(Mock(com.morpheusdata.core.MorpheusContext) { getServices() >> services })
+		StorageVolume local = new StorageVolume(id: 1L, name: 'local', deviceName: '/dev/vda', type: new com.morpheusdata.model.StorageVolumeType(code: 'standard'))
+		StorageVolume shallow = new StorageVolume(id: 2L)
+
+		expect: 'a local disk from get() or list() has a type: not reloaded; a shallow projection is'
+		r.fullVolume(local).is(local)
+		volumeGets == 0
+		r.fullVolume(shallow).name == 'reloaded'
+		volumeGets == 1
+
+		and: 'a full server with an empty volume list is taken as it is; a shallow one (no type) is loaded'
+		r.volumesOf(new ComputeServer(id: 5L, computeServerType: new ComputeServerType(code: 'mvmVm'), volumes: [])) == []
+		serverGets == 0
+		r.volumesOf(new ComputeServer(id: 5L)) == []
+		serverGets == 1
+
+		and: 'host() reads the volumes once'
+		r.host(new ComputeServer(id: 6L))
+		serverGets == 2
+	}
+
+	def "host: one LUN per device id and one name per device, in volume order"() {
+		given:
+		String mapper = "/dev/mapper/3${Fixtures.WWN_DS.toLowerCase()}".toString()
+		ComputeServer s = new ComputeServer(id: 1L, name: 'host-a', computeServerType: new ComputeServerType(code: 'mvmHost', vmHypervisor: true))
+		s.volumes = [
+			new StorageVolume(name: 'a', deviceName: mapper, maxStorage: 1L),
+			new StorageVolume(name: 'b', deviceName: '/dev/sdb', wwn: Fixtures.LOCAL),
+			new StorageVolume(name: 'c', deviceName: mapper, maxStorage: 9L),
+			new StorageVolume(name: 'd', deviceName: '/dev/sdb')]
+
+		when:
+		HostFacts h = reader.host(s)
+
+		then:
+		h.luns*.deviceId == [WwnMatcher.norm(Fixtures.WWN_DS), WwnMatcher.norm(Fixtures.LOCAL)]
+		h.luns[0].sizeBytes == 1L
+		h.devices == [mapper, '/dev/sdb']
+	}
+
 	def "owner: the server's account, else its cluster's owner"() {
 		given:
 		def acct = new com.morpheusdata.model.Account(id: 3L)

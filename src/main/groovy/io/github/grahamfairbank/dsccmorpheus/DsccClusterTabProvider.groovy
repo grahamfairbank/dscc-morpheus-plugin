@@ -35,11 +35,17 @@ class DsccClusterTabProvider extends AbstractClusterTabProvider {
 		if (cluster?.id == null) return false
 		DsccSettings s = plugin.loadSettings()
 		if (!(s.configured && DsccMorpheusPlugin.canView(s, user) && MorpheusReader.mayView(MorpheusReader.safe { cluster.owner?.id } as Long, MorpheusReader.viewer(user, account)))) return false
-		if (s.showAlways) return true
+		if (s.showAlways) {
+			plugin.warmIndex(s)
+			return true
+		}
 		try {
-			Map f = plugin.clusterFacts(cluster)
-			return ((List<HostFacts>) f.hosts).any { h -> h.luns.any { WwnMatcher.isHpeArray(it.deviceId as String) } } ||
+			// Hosts' LUNs and datastores decide; the VMs (the slow read) are read by the render only.
+			Map f = plugin.clusterStorage(cluster)
+			boolean shown = ((List<HostFacts>) f.hosts).any { h -> h.luns.any { WwnMatcher.isHpeArray(it.deviceId as String) } } ||
 				((List<DatastoreFacts>) f.datastores).any { WwnMatcher.isHpeArray(it.lunId) }
+			if (shown) plugin.warmIndex(s)
+			return shown
 		} catch (Throwable e) {
 			log.warn("dscc-morpheus: cluster tab check for ${cluster.id} failed: ${e}")
 			return false

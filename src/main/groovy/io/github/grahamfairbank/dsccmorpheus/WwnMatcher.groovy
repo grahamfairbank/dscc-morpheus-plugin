@@ -2,6 +2,8 @@ package io.github.grahamfairbank.dsccmorpheus
 
 import groovy.transform.CompileStatic
 
+import java.util.regex.Pattern
+
 /**
  * One device id for a SAN LUN, whatever form Morpheus or DSCC stores it in.
  *
@@ -17,6 +19,7 @@ class WwnMatcher {
 
 	static final String OUI_3PAR = '0002ac'
 	static final String OUI_NIMBLE = '6c9ce9'
+	private static final Pattern HEX = Pattern.compile('[0-9a-f]+')
 
 	/** Lowercase 32- or 16-hex id with prefixes and separators removed, or null if it isn't a device id. */
 	static String norm(Object raw) {
@@ -30,7 +33,7 @@ class WwnMatcher {
 		w = w.replace(':', '').replace('-', '')
 		if (w.length() == 33 && (w.charAt(0) == '2' as char || w.charAt(0) == '3' as char)) w = w.substring(1)
 		if (!(w.length() == 32 || w.length() == 16)) return null
-		return w ==~ /[0-9a-f]+/ ? w : null
+		return HEX.matcher(w).matches() ? w : null
 	}
 
 	/** True for ids of HPE array LUNs (3PAR family NAA, or Nimble serial). */

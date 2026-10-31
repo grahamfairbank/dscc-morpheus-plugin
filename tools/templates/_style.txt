@@ -21,6 +21,8 @@
 .dscc-morpheus .vc-copy { border: 0; background: none; padding: 0 2px; margin-left: 4px; cursor: pointer; color: inherit; opacity: .6; vertical-align: middle; line-height: 1; }
 .dscc-morpheus .vc-copy:hover, .dscc-morpheus .vc-copy:focus-visible { opacity: 1; }
 .dscc-morpheus .vc-copy.vc-copied { color: #01a982; opacity: 1; }
+.dscc-morpheus .vc-copy::before { content: ""; display: inline-block; width: 12px; height: 12px; vertical-align: middle; background-color: currentColor; --vc-copy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='5' y='5' width='9' height='9' rx='1.5' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3Cpath d='M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E"); -webkit-mask: var(--vc-copy-icon) center / contain no-repeat; mask: var(--vc-copy-icon) center / contain no-repeat; forced-color-adjust: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+@media (forced-colors: active) { .dscc-morpheus .vc-copy::before { background-color: ButtonText; } }
 .dscc-morpheus td.vc-lun { white-space: nowrap; width: 1%; }
 .dscc-morpheus a.vc-link { white-space: nowrap; }
 .dscc-morpheus .vc-bar { display: inline-block; width: 60px; height: 6px; background: rgba(128,128,128,.25); border-radius: 3px; margin-left: 6px; vertical-align: middle; overflow: hidden; }

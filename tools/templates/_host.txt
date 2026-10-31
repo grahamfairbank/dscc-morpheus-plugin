@@ -12,7 +12,7 @@
 		<tr><th>LUN</th><th>Used by</th><th>Array</th><th>Array volume</th><th class="vc-num">Size</th><th class="vc-num" title="Physical space used on the array, after thin provisioning and data reduction">Used on array</th><th>State</th><th>Seen by hosts</th><th></th></tr>
 		{{#each rows}}
 		<tr>
-			<td class="vc-lun"><code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></td>
+			<td class="vc-lun"><code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"></button></td>
 			<td>{{usedBy}}</td>
 			<td>{{#if matched}}<span class="vc-{{arrayLevel}}"><span class="vc-dot"></span></span>{{array}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
 			<td>{{#if matched}}{{volume}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>

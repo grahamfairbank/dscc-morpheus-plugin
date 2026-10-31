@@ -23,6 +23,8 @@
 .dscc-morpheus .vc-copy { border: 0; background: none; padding: 0 2px; margin-left: 4px; cursor: pointer; color: inherit; opacity: .6; vertical-align: middle; line-height: 1; }
 .dscc-morpheus .vc-copy:hover, .dscc-morpheus .vc-copy:focus-visible { opacity: 1; }
 .dscc-morpheus .vc-copy.vc-copied { color: #01a982; opacity: 1; }
+.dscc-morpheus .vc-copy::before { content: ""; display: inline-block; width: 12px; height: 12px; vertical-align: middle; background-color: currentColor; --vc-copy-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='5' y='5' width='9' height='9' rx='1.5' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3Cpath d='M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E"); -webkit-mask: var(--vc-copy-icon) center / contain no-repeat; mask: var(--vc-copy-icon) center / contain no-repeat; forced-color-adjust: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+@media (forced-colors: active) { .dscc-morpheus .vc-copy::before { background-color: ButtonText; } }
 .dscc-morpheus td.vc-lun { white-space: nowrap; width: 1%; }
 .dscc-morpheus a.vc-link { white-space: nowrap; }
 .dscc-morpheus .vc-bar { display: inline-block; width: 60px; height: 6px; background: rgba(128,128,128,.25); border-radius: 3px; margin-left: 6px; vertical-align: middle; overflow: hidden; }
@@ -50,7 +52,7 @@
 			<td>{{disk}} <span class="vc-muted">{{device}}</span></td>
 			<td class="vc-num">{{diskSize}}</td>
 			<td>{{kindText}}{{#if datastoreUse}}<br><span class="vc-muted">{{datastoreUse}}</span>{{/if}}</td>
-			<td class="vc-lun">{{#if lunId}}<code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>{{else}}<span class="vc-muted">--</span>{{/if}}</td>
+			<td class="vc-lun">{{#if lunId}}<code title="{{lunId}}">{{lunShort}}</code><button type="button" class="vc-copy" data-dscc-copy="{{lunId}}" title="Copy LUN id {{lunId}}" aria-label="Copy LUN id"></button>{{else}}<span class="vc-muted">--</span>{{/if}}</td>
 			<td>{{#if matched}}<span class="vc-{{arrayLevel}}"><span class="vc-dot"></span></span>{{array}} <span class="vc-muted">({{arrayState}})</span>{{else}}<span class="vc-muted">--</span>{{/if}}</td>
 			<td>{{#if matched}}{{volume}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>
 			<td class="vc-num">{{#if matched}}{{size}} / {{used}}{{else}}<span class="vc-muted">--</span>{{/if}}</td>

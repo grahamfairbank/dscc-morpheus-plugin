@@ -3,6 +3,7 @@ package io.github.grahamfairbank.dsccmorpheus
 import com.morpheusdata.core.Plugin
 import com.morpheusdata.model.ComputeServer
 import com.morpheusdata.model.ComputeServerGroup
+import com.morpheusdata.model.Instance
 import com.morpheusdata.model.OptionType
 import com.morpheusdata.model.Permission
 import com.morpheusdata.model.User
@@ -85,17 +86,82 @@ class DsccMorpheusPlugin extends Plugin {
 		return false
 	}
 
-	/** Hosts, datastores and VMs of a cluster, read once a minute at most and shared by all its tabs. */
+	/**
+	 * Hosts (with their LUNs) and datastores of a cluster: all the cluster tab check needs. Read once a minute at
+	 * most, shared by all its tabs, refreshed in the background for frequent viewers. Keyed by the cluster's owner
+	 * too, so a tenant change is a new read; the hosts are owner-filtered on every read (MorpheusReader.owned).
+	 */
+	Map clusterStorage(ComputeServerGroup cluster) {
+		if (cluster?.id == null) return [hosts: [], datastores: [], hostIds: [], owner: null]
+		Long owner = MorpheusReader.safe { cluster.owner?.id } as Long
+		// No known owner: nothing (the hosts would be filtered out anyway; the datastores aren't per tenant).
+		if (owner == null) return [hosts: [], datastores: [], hostIds: [], owner: null]
+		return (Map) service.remember("cluster-hosts:${cluster.id}:${owner}".toString(), DsccService.FACTS_TTL_MS, DsccService.FACTS_REFRESH_AFTER_MS) {
+			MorpheusReader r = reader()
+			List<ComputeServer> hostServers = r.clusterHosts(cluster)
+			[hosts: hostServers.collect { r.host(it) }, datastores: r.clusterDatastores(cluster.id),
+			 hostIds: hostServers*.id as List<Long>, owner: owner]
+		}
+	}
+
+	/**
+	 * The VMs on these hosts in the owner's tenant (the slow read: 10 to 13 s for 65 VMs, measured on 9.0.1). Only
+	 * the tabs' render needs them. The hosts are part of the key, so a host change is a new read.
+	 */
+	List<GuestFacts> clusterGuests(Long clusterId, List<Long> hostIds, Long owner) {
+		if (clusterId == null || !hostIds) return []
+		String key = "cluster-guests:${clusterId}:${owner}:${hostIds.sort(false).join(',')}".toString()
+		return (List<GuestFacts>) service.remember(key, DsccService.FACTS_TTL_MS, DsccService.FACTS_REFRESH_AFTER_MS) {
+			MorpheusReader r = reader()
+			r.guestsOn(hostIds, owner).collect { r.guest(it) }
+		}
+	}
+
+	/** Hosts, datastores and VMs of a cluster, for the cluster and host tabs' render. */
 	Map clusterFacts(ComputeServerGroup cluster) {
 		if (cluster?.id == null) return [hosts: [], datastores: [], guests: []]
-		return (Map) service.remember("cluster:${cluster.id}".toString(), DsccService.FACTS_TTL_MS) {
-			MorpheusReader r = reader()
-			Long owner = MorpheusReader.safe { cluster.owner?.id } as Long
-			List<ComputeServer> hostServers = r.clusterHosts(cluster)
-			List<HostFacts> hosts = hostServers.collect { r.host(it) }
-			List<DatastoreFacts> ds = r.clusterDatastores(cluster.id)
-			List<GuestFacts> guests = r.guestsOn(hostServers*.id, owner).collect { r.guest(it) }
-			[hosts: hosts, datastores: ds, guests: guests]
+		Map part = clusterStorage(cluster)
+		return [hosts: part.hosts, datastores: part.datastores,
+		        guests: clusterGuests(cluster.id, (List<Long>) part.hostIds, (Long) part.owner)]
+	}
+
+	// ---- one page view: show() and the render right after it share these loads (DsccService.PAGE_TTL_MS) ----
+	// Only Morpheus records and facts derived from them are kept, keyed by object id; never a show() decision.
+
+	/** The full server, loaded by id (the passed object is never trusted); a failed load is not kept. */
+	ComputeServer fullServer(MorpheusReader r, ComputeServer s) {
+		if (s?.id == null) return s
+		ComputeServer loaded = (ComputeServer) service.remember("srv:${s.id}".toString(), DsccService.PAGE_TTL_MS) { r.load(s.id) }
+		return loaded ?: s
+	}
+
+	HostFacts hostOf(MorpheusReader r, ComputeServer full) {
+		return (HostFacts) service.remember("host:${full.id}".toString(), DsccService.PAGE_TTL_MS) { r.host(full) }
+	}
+
+	GuestFacts guestOf(MorpheusReader r, ComputeServer full) {
+		return (GuestFacts) service.remember("guest:${full.id}".toString(), DsccService.PAGE_TTL_MS) { r.guest(full) }
+	}
+
+	/** The full instance, loaded by id; a failed load is not kept. */
+	Instance fullInstance(MorpheusReader r, Instance i) {
+		if (i?.id == null) return i
+		Instance loaded = (Instance) service.remember("inst:${i.id}".toString(), DsccService.PAGE_TTL_MS) { r.loadInstance(i.id) }
+		return loaded ?: i
+	}
+
+	List<GuestFacts> instanceGuests(MorpheusReader r, Instance full) {
+		Closure<List<GuestFacts>> read = { r.instanceServers(full).collect { r.guest(it) } }
+		if (full?.id == null) return read.call()
+		return (List<GuestFacts>) service.remember("inst-guests:${full.id}".toString(), DsccService.PAGE_TTL_MS, read)
+	}
+
+	/** Called when a tab check passes: the first viewer after a restart or settings change starts the index read. */
+	void warmIndex(DsccSettings s) {
+		try {
+			if (service.currentIndex() == null) service.requestIndex(s)
+		} catch (Throwable e) {
+			log.debug("dscc-morpheus: could not start the index read: ${e}")
 		}
 	}
 

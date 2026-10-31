@@ -1,9 +1,12 @@
 package io.github.grahamfairbank.dsccmorpheus
 
+import java.util.regex.Pattern
+
 /** Small formatting helpers shared by the storage map and the tabs. */
 class DsccView {
 
 	static final List<String> UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+	private static final Pattern POINT_ZERO = Pattern.compile('\\.0$')
 
 	/** 1649267441664 -> "1.5 TiB"; null -> "--". Binary units, as the arrays report them. */
 	static String bytes(Long b) {
@@ -12,13 +15,13 @@ class DsccView {
 		int u = 0
 		while (v >= 1024d && u < UNITS.size() - 1) { v /= 1024d; u++ }
 		String n = v >= 100 || u == 0 ? String.format('%.0f', v) : String.format('%.1f', v)
-		return "${n.replaceFirst(/\.0$/, '')} ${UNITS[u]}".toString()
+		return "${POINT_ZERO.matcher(n).replaceFirst('')} ${UNITS[u]}".toString()
 	}
 
 	/** 3.3 -> "3.3:1", 25.69 -> "25.7:1"; null -> "--". */
 	static String ratio(Double r) {
 		if (r == null) return '--'
-		return "${String.format('%.1f', r).replaceFirst(/\.0$/, '')}:1".toString()
+		return "${POINT_ZERO.matcher(String.format('%.1f', r)).replaceFirst('')}:1".toString()
 	}
 
 	/** Percent used, whole number, or null when unknown. */

@@ -33,11 +33,14 @@ class DsccInstanceTabProvider extends AbstractInstanceTabProvider {
 		DsccSettings s = plugin.loadSettings()
 		if (!(s.configured && DsccMorpheusPlugin.canView(s, user))) return false
 		try {
-			Instance full = plugin.reader().fullInstance(instance)
+			MorpheusReader r = plugin.reader()
+			// Loaded by id and kept for the render that follows; the tenant check below runs on every call.
+			Instance full = plugin.fullInstance(r, instance)
 			Long owner = MorpheusReader.safe { full.account?.id } as Long
 			if (!MorpheusReader.mayViewPage(owner, MorpheusReader.viewer(user, account))) return plugin.hidden("instance ${instance.id}", "tenant (owner ${owner}, viewer ${MorpheusReader.safe { MorpheusReader.viewer(user, account)?.id }})")
-			if (s.showAlways) return true
-			return plugin.anyArrayDisk(guests(full)) ?: plugin.hidden("instance ${instance.id}", 'no disk on an HPE array LUN')
+			boolean shown = s.showAlways || (plugin.anyArrayDisk(plugin.instanceGuests(r, full)) ?: plugin.hidden("instance ${instance.id}", 'no disk on an HPE array LUN'))
+			if (shown) plugin.warmIndex(s)
+			return shown
 		} catch (Throwable e) {
 			log.warn("dscc-morpheus: instance tab check for ${instance.id} failed: ${e}")
 			return false
@@ -50,7 +53,8 @@ class DsccInstanceTabProvider extends AbstractInstanceTabProvider {
 		Map model
 		try {
 			model = plugin.service.guestTab(instance.name, {
-				List<GuestFacts> g = guests(plugin.reader().fullInstance(instance))
+				MorpheusReader r = plugin.reader()
+				List<GuestFacts> g = plugin.instanceGuests(r, plugin.fullInstance(r, instance))
 				[guests: g, datastores: plugin.datastoresFor(g)]
 			}, s)
 		} catch (Throwable e) {
@@ -61,8 +65,4 @@ class DsccInstanceTabProvider extends AbstractInstanceTabProvider {
 		return getRenderer().renderTemplate('hbs/dscc-guest', vm)
 	}
 
-	List<GuestFacts> guests(Instance instance) {
-		MorpheusReader r = plugin.reader()
-		return r.instanceServers(instance).collect { r.guest(it) }
-	}
 }

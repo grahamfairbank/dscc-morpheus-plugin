@@ -2,6 +2,8 @@ package io.github.grahamfairbank.dsccmorpheus
 
 import groovy.util.logging.Slf4j
 
+import java.util.regex.Pattern
+
 /** One storage system (array or Nimble group) in DSCC, in the units and words the tabs use. */
 class ArraySystem {
 	String key          // "dt4:<id>": unique across families
@@ -19,6 +21,8 @@ class ArraySystem {
 	Double reduction
 	String url
 	String note         // set when part of this system's data could not be read
+	/** When this system's volumes were read (clock ms); older than the index when they were carried over. */
+	Long volumesAt
 
 	Long getUsedBytes() { totalBytes != null && freeBytes != null ? Math.max(0L, totalBytes - freeBytes) : null }
 }
@@ -45,12 +49,14 @@ class ArrayVolume {
  * - device-type1/4: volume sizeMiB, usedSizeMiB, state.overall; system overallState; capacity-summary total/free in MiB.
  * - device-type2: volume size in MiB, usage in bytes, vol_state/online/space_usage_level; system usable_capacity_bytes,
  *   free_space in bytes; health from /health-status error_list (SM_ok = healthy).
+ * - Pool: device-type1/4 userCpgName (device-type4 also usrCpgShortName), snapshotCpgName; device-type2 pool_name.
  */
 @Slf4j
 class DsccIndex {
 
 	static final long MIB = 1024L * 1024L
 	static final long LIST_TTL_MS = 0L   // the index itself is the cache
+	private static final Pattern STATE_PREFIX = Pattern.compile('^STATE_')
 
 	static final Map<Integer, String> FAMILY_NAMES = [
 		1: 'HPE 3PAR / Primera / Alletra 9000',
@@ -74,8 +80,12 @@ class DsccIndex {
 
 	ArraySystem systemOf(ArrayVolume v) { v ? systems[v.systemKey] : null }
 
-	/** Reads every system and volume. A failing system is kept with a note; a failing system list fails the build. */
-	static DsccIndex build(DsccClient c, long now) {
+	/**
+	 * Reads every system and volume. A failing system list fails the build. A system whose volumes can't be read
+	 * keeps its volumes from the previous index (with a note), so its LUNs don't turn into "not a DSCC volume".
+	 * A 429 or the time budget stops the whole build: the caller keeps the previous index.
+	 */
+	static DsccIndex build(DsccClient c, long now, DsccIndex previous = null) {
 		Map<String, ArraySystem> systems = [:]
 		Map<String, ArrayVolume> volumes = [:]
 		List<String> notes = []
@@ -95,10 +105,19 @@ class DsccIndex {
 							volumes[av.deviceId] = av
 						}
 					}
-				} catch (DsccBudgetException e) {
+					sys.volumesAt = now
+				} catch (DsccBudgetException | DsccRateLimitException e) {
 					throw e
 				} catch (DsccException e) {
-					sys.note = "Couldn't read this system's volumes: ${e.message}".toString()
+					ArraySystem old = previous?.systems?.get(sys.key)
+					List<ArrayVolume> kept = previous ? previous.volumes.values().findAll { it.systemKey == sys.key } as List<ArrayVolume> : []
+					kept.each { ArrayVolume av -> volumes.putIfAbsent(av.deviceId, av) }
+					if (kept) {
+						sys.volumesAt = old?.volumesAt ?: previous.builtAt
+						sys.note = "Couldn't read this system's volumes (${e.message}), so its volumes are from ${DsccView.when(sys.volumesAt)}".toString()
+					} else {
+						sys.note = "Couldn't read this system's volumes: ${e.message}".toString()
+					}
 					notes << "${sys.name}: ${sys.note}".toString()
 				}
 			}
@@ -122,6 +141,8 @@ class DsccIndex {
 			sys.totalBytes = mib(cs.total)
 			sys.freeBytes = mib(cs.free)
 			sys.reduction = ratio(cs.dataReduction)
+		} catch (DsccBudgetException | DsccRateLimitException e) {
+			throw e
 		} catch (DsccException e) {
 			sys.note = "Couldn't read capacity: ${e.message}".toString()
 		}
@@ -135,7 +156,7 @@ class DsccIndex {
 		Map cap = (Map) (v.volumeCapacity instanceof Map ? v.volumeCapacity : [:])
 		return new ArrayVolume(id: v.id as String, name: v.name as String, systemKey: systemKey,
 			deviceId: WwnMatcher.norm(v.wwn), sizeBytes: mib(v.sizeMiB ?: cap.sizeMiB), usedBytes: mib(v.usedSizeMiB ?: cap.usedSizeMiB),
-			pool: (v.userCpg ?: v.snapCpg) as String, state: stateWords(overall), level: stateLevel(overall))
+			pool: (v.userCpgName ?: v.usrCpgShortName ?: v.snapshotCpgName) as String, state: stateWords(overall), level: stateLevel(overall))
 	}
 
 	// ---- device-type2 (Nimble, Alletra 5000/6000) --------------------------------------------------
@@ -158,6 +179,8 @@ class DsccIndex {
 			}
 			sys.state = problems ? "Attention: ${problems.unique().take(3).join(', ')}".toString() : 'Healthy'
 			sys.level = problems ? 'warn' : 'ok'
+		} catch (DsccBudgetException | DsccRateLimitException e) {
+			throw e
 		} catch (DsccException e) {
 			sys.state = problems ? "Attention: ${problems.take(3).join(', ')}".toString() : 'Unknown'
 			sys.level = problems ? 'warn' : 'muted'
@@ -182,12 +205,12 @@ class DsccIndex {
 
 	static String stateWords(String s) {
 		if (!s) return 'Unknown'
-		String w = s.replaceFirst('^STATE_', '').toLowerCase().replace('_', ' ')
+		String w = STATE_PREFIX.matcher(s).replaceFirst('').toLowerCase().replace('_', ' ')
 		return w == 'normal' ? 'Normal' : w.substring(0, 1).toUpperCase() + w.substring(1)
 	}
 
 	static String stateLevel(String s) {
-		String u = (s ?: '').toUpperCase().replaceFirst('^STATE_', '')
+		String u = STATE_PREFIX.matcher((s ?: '').toUpperCase()).replaceFirst('')
 		if (u in ['NORMAL', 'OK', 'HEALTHY']) return 'ok'
 		if (u in ['DEGRADED', 'WARNING', 'NEW']) return 'warn'
 		if (u in ['FAILED', 'CRITICAL', 'OFFLINE']) return 'bad'

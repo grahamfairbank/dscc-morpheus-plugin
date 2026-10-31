@@ -50,7 +50,7 @@ The rest of the tour uses test data, so every state shows up.
 
 ![VM tab: each disk, how it's stored, and the array volume behind it](docs/images/tab-guest.png)
 
-## What it does (0.1.8)
+## What it does (0.2.0)
 
 - **Appears only where it makes sense:** on clusters, hypervisor hosts and VMs that use at least one HPE array LUN. A diagnostics setting shows it everywhere.
 - **Reads every HPE array in your DSCC workspace** in one background pass: systems, capacity, health and every volume, refreshed every five minutes while people use the tabs.
@@ -109,7 +109,7 @@ The plugin uses **one GreenLake API client for the whole Morpheus appliance**: e
 - **Tenants.** The cluster tab shows only to users of the cluster's tenant (or the master tenant), and lists only that tenant's hosts and VMs. Host and VM tabs check the tenant when Morpheus says who is viewing; when it doesn't (Morpheus 9.0.1 passes no viewer to these checks), the tab follows Morpheus's own access to the page.
 - **Optional permission.** Turn on "Only show to roles with the dscc-morpheus permission" to limit the tabs to roles granted **dscc-morpheus: View HPE Storage tab**.
 - **One small browser script,** loaded with the page's security nonce. It only copies a LUN id to the clipboard: no requests, no page changes.
-- **Errors stay in the log.** DSCC's error bodies and unexpected errors can hold internal detail, so the tab shows a short message (with a reference number for unexpected errors) and the details go to the Morpheus log. When a refresh fails, the tabs keep showing the previous data with a note saying so, and the plugin waits a minute before trying again.
+- **Errors stay in the log.** DSCC's error bodies and unexpected errors can hold internal detail, so the tab shows a short message (with a reference number for unexpected errors) and the details go to the Morpheus log. When a refresh fails, the tabs keep showing the previous data with a note saying so, and the plugin waits a minute before trying again (longer when DSCC asks it to slow down).
 
 To report a security problem, see [SECURITY.md](SECURITY.md).
 
@@ -117,8 +117,8 @@ To report a security problem, see [SECURITY.md](SECURITY.md).
 
 - **Only the Morpheus appliance talks to GreenLake,** over outbound HTTPS with one OAuth2 API client. The browser gets HTML rendered on the appliance.
 - **Sign-in:** with a workspace ID, the plugin signs in through the workspace's own token issuer first, and uses the legacy GreenLake sign-in only as a fallback. Tokens are reused until a minute before they expire.
-- **One background read:** every storage system, its capacity and health, and every volume (500 per page), into an in-memory index refreshed every five minutes. Tabs never wait on DSCC; the first view after a restart says it's reading.
-- **Morpheus records** for a cluster (hosts, datastores, VMs) are read at most once a minute and shared by all of that cluster's tabs.
+- **One background read:** every storage system, its capacity and health, and every volume (500 per page, only the fields the plugin uses), into an in-memory index refreshed every five minutes. Tabs never wait on DSCC; the first view after a restart says it's reading. If one array's volumes can't be read, its volumes from the previous read stay, with a note; if DSCC rate-limits the plugin, the read stops and waits as long as DSCC asks.
+- **Morpheus records** for a cluster (hosts, datastores, VMs) are read at most once a minute and shared by all of that cluster's tabs; the cluster check reads only the hosts and datastores. A page's tab check and its tab share one read of the server or instance.
 - **Units:** sizes are binary (GiB, TiB), as the arrays report them. "Used on array" is physical space after thin provisioning and data reduction, so a new thin volume can show 0 B.
 
 The source is commented throughout: `DsccIndex` (what is read from DSCC, per array family), `StorageMap` (how LUNs, datastores and disks are joined), `MorpheusReader` (what is read from Morpheus), `WwnMatcher` (device ids).

@@ -75,6 +75,9 @@ class ServiceAndTemplateSpec extends Specification {
 		!html.contains('<th>Family</th>')
 		html.contains('3.3:1') && html.contains('25.7:1')
 		html.contains("data-dscc-copy=\"${WwnMatcher.norm(Fixtures.WWN_DS)}\"")
+		html.contains('class="vc-copy"') && html.contains('aria-label="Copy LUN id"')
+		!html.contains('<svg')                                   // the icon is drawn once, in the style
+		html.count('--vc-copy-icon: url(') == 1 && html.contains('mask: var(--vc-copy-icon)') && html.contains('forced-colors: active') && html.contains('print-color-adjust: exact')
 		html.contains('Array LUNs not seen by every host')
 		html.contains("HPE array LUNs that DSCC doesn\'t list as volumes") || html.contains('HPE array LUNs that DSCC doesn&#x27;t list as volumes')
 		html.contains('unofficial community plugin')
@@ -101,6 +104,7 @@ class ServiceAndTemplateSpec extends Specification {
 		guest.contains('File on GFS2 datastore nimble-ds01')
 		guest.contains('HPE_VM_vm-a-data')
 		guest.contains('/block/volumes/device-type4/v2?systemUid=')
+		host.contains('aria-label="Copy LUN id"') && !host.contains('<svg')
 		!guest.contains('<th>VM</th>')
 	}
 

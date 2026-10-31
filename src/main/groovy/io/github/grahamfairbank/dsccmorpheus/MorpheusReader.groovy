@@ -39,11 +39,16 @@ class MorpheusReader {
 	 */
 	ComputeServer full(ComputeServer s) {
 		if (s?.id == null) return s
+		return load(s.id) ?: s
+	}
+
+	/** The server by id, or null when it can't be loaded. */
+	ComputeServer load(Long id) {
 		try {
-			return morpheus.services.computeServer.get(s.id) ?: s
+			return morpheus.services.computeServer.get(id)
 		} catch (Throwable e) {
-			log.warn("dscc-morpheus: could not load server ${s.id}: ${e}")
-			return s
+			log.warn("dscc-morpheus: could not load server ${id}: ${e}")
+			return null
 		}
 	}
 
@@ -55,11 +60,16 @@ class MorpheusReader {
 	/** The full instance record (a tab can be handed a bare one), loaded by id. */
 	Instance fullInstance(Instance i) {
 		if (i?.id == null) return i
+		return loadInstance(i.id) ?: i
+	}
+
+	/** The instance by id, or null when it can't be loaded. */
+	Instance loadInstance(Long id) {
 		try {
-			return morpheus.services.instance.get(i.id) ?: i
+			return morpheus.services.instance.get(id)
 		} catch (Throwable e) {
-			log.warn("dscc-morpheus: could not load instance ${i.id}: ${e}")
-			return i
+			log.warn("dscc-morpheus: could not load instance ${id}: ${e}")
+			return null
 		}
 	}
 
@@ -67,11 +77,15 @@ class MorpheusReader {
 		return s?.computeServerType?.vmHypervisor == true || s?.computeServerType?.code in ['mvmHost', 'kvmHost']
 	}
 
-	/** A volume with the fields the plugin reads; loads it by id when it arrives without them. */
+	/**
+	 * A volume with the fields the plugin reads; loads it by id only when it looks like a shallow projection (no
+	 * type and none of those fields). Records from get() and list() are complete (measured on 9.0.1: reloading a
+	 * bare local or datastore-less disk never added anything), so they aren't reloaded.
+	 */
 	StorageVolume fullVolume(StorageVolume v) {
 		if (v?.id == null) return v
 		boolean bare = !v.wwn && !v.externalId && !(v.deviceName?.startsWith('/dev/mapper/')) && v.datastore == null
-		if (!bare) return v
+		if (!bare || safe { v.type } != null) return v
 		try {
 			return morpheus.services.storageVolume.get(v.id) ?: v
 		} catch (Throwable e) {
@@ -83,12 +97,14 @@ class MorpheusReader {
 	HostFacts host(ComputeServer s) {
 		HostFacts h = new HostFacts(id: s.id, name: s.name, typeCode: s.computeServerType?.code,
 			vmHypervisor: s.computeServerType?.vmHypervisor, clusterId: safe { s.serverGroup?.id } as Long)
-		volumesOf(s).collect { fullVolume(it) }.each { StorageVolume v ->
+		List<StorageVolume> vols = volumesOf(s)
+		Map<String, Map> luns = new LinkedHashMap<>()   // first per device id, in volume order
+		vols.collect { fullVolume(it) }.each { StorageVolume v ->
 			String id = WwnMatcher.norm(v.deviceName?.startsWith('/dev/mapper/') ? v.deviceName : null) ?: WwnMatcher.norm(v.wwn)
-			if (id) h.luns << [deviceId: id, device: v.deviceName ?: v.name, sizeBytes: v.maxStorage]
+			if (id && !luns.containsKey(id)) luns[id] = [deviceId: id, device: v.deviceName ?: v.name, sizeBytes: v.maxStorage]
 		}
-		h.luns = h.luns.unique { it.deviceId }
-		h.devices = volumesOf(s).collect { (it.deviceName ?: it.name ?: '?') as String }.unique()
+		h.luns = new ArrayList<Map>(luns.values())
+		h.devices = new ArrayList<String>(new LinkedHashSet<String>(vols.collect { (it.deviceName ?: it.name ?: '?') as String }))
 		return h
 	}
 
@@ -175,10 +191,15 @@ class MorpheusReader {
 		return out.unique { it.id }
 	}
 
-	/** A server's volumes; loads the server when the passed object has none (tab objects can be shallow). */
+	/**
+	 * A server's volumes. Loads the server again only when the object has no volume list, or an empty one while
+	 * the server itself looks shallow (no type: plugin-core starts volumes as an empty list). A full record with no
+	 * volumes is taken as it is.
+	 */
 	List<StorageVolume> volumesOf(ComputeServer s) {
 		List<StorageVolume> list = s?.volumes
-		if (!list && s?.id != null) {
+		boolean shallow = list == null || (list.isEmpty() && safe { s.computeServerType } == null)
+		if (shallow && s?.id != null) {
 			try {
 				list = morpheus.services.computeServer.get(s.id)?.volumes
 			} catch (Throwable e) {
