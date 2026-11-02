@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1035" viewBox="0 0 1400 1035" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title>How dscc-morpheus-plugin works</title>
+<desc>Architecture and flows of dscc-morpheus-plugin: the browser, the plugin inside the Morpheus appliance, and HPE GreenLake Data Services.</desc>
+<defs>
+<marker id="a2a6bb8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2a6bb8"/></marker>
+<marker id="a3f7a1d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3f7a1d"/></marker>
+<marker id="aa35f00" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a35f00"/></marker>
+</defs>
+<rect width="1400" height="1035" fill="#ffffff"/>
+<text x="24" y="48" font-size="30" font-weight="bold" fill="#1b1f24">How dscc-morpheus-plugin works</text>
+<text x="24" y="76" font-size="15" fill="#57606a">The HPE array, volume and LUN under every HPE Morpheus datastore, host and VM, with health and capacity from HPE GreenLake Data Services. Read-only.</text>
+<rect x="24" y="108" width="306" height="576" rx="14" fill="#eaf2fc" stroke="#2a6bb8" stroke-width="2"/>
+<text x="42" y="138" font-size="19" font-weight="bold" fill="#2a6bb8" text-anchor="start">① Your browser</text>
+<text x="42" y="158" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start">Morpheus web UI: nothing to install</text>
+<rect x="400" y="108" width="600" height="576" rx="14" fill="#ecf6f2" stroke="#1c7a5c" stroke-width="2"/>
+<text x="418" y="138" font-size="19" font-weight="bold" fill="#1c7a5c" text-anchor="start">② Morpheus appliance</text>
+<text x="418" y="158" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start">dscc-morpheus-plugin jar, running inside Morpheus</text>
+<rect x="1070" y="108" width="306" height="576" rx="14" fill="#eef7e6" stroke="#3f7a1d" stroke-width="2"/>
+<text x="1088" y="138" font-size="19" font-weight="bold" fill="#3f7a1d" text-anchor="start">③ HPE GreenLake</text>
+<text x="1088" y="158" font-size="13" font-weight="normal" fill="#57606a" text-anchor="start">Your workspace, with arrays onboarded</text>
+<rect x="38" y="174" width="278" height="195" rx="8" fill="#ffffff" stroke="#2a6bb8" stroke-width="1.2"/>
+<text x="52" y="203" font-size="15" font-weight="bold" fill="#2a6bb8" text-anchor="start">Cluster page › HPE Storage</text>
+<text x="52" y="226" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="66" y="226" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Arrays serving the cluster: model,</text>
+<text x="66" y="243" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">health, capacity used, data</text>
+<text x="66" y="260" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">reduction</text>
+<text x="52" y="281" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="66" y="281" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">GFS2 datastores and Alletra B10000</text>
+<text x="66" y="298" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Integration disks, with their</text>
+<text x="66" y="315" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">array volumes</text>
+<text x="52" y="336" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="66" y="336" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">LUNs not seen by every host; HPE</text>
+<text x="66" y="353" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">LUNs DSCC doesn&#x27;t list</text>
+<rect x="38" y="381" width="278" height="102" rx="8" fill="#ffffff" stroke="#2a6bb8" stroke-width="1.2"/>
+<text x="52" y="410" font-size="15" font-weight="bold" fill="#2a6bb8" text-anchor="start">Host page › HPE Storage</text>
+<text x="52" y="433" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="66" y="433" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Every HPE array LUN on the host,</text>
+<text x="66" y="450" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">what uses it, how many hosts see</text>
+<text x="66" y="467" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">it</text>
+<rect x="38" y="495" width="278" height="123" rx="8" fill="#ffffff" stroke="#2a6bb8" stroke-width="1.2"/>
+<text x="52" y="524" font-size="15" font-weight="bold" fill="#2a6bb8" text-anchor="start">VM / instance › HPE Storage</text>
+<text x="52" y="547" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="66" y="547" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Every disk, how it&#x27;s stored, and</text>
+<text x="66" y="564" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">the array volume behind it</text>
+<text x="52" y="585" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="66" y="585" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Open in DSCC links; copy button on</text>
+<text x="66" y="602" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">every LUN id</text>
+<rect x="414" y="174" width="279" height="195" rx="8" fill="#ffffff" stroke="#1c7a5c" stroke-width="1.2"/>
+<text x="428" y="203" font-size="15" font-weight="bold" fill="#1c7a5c" text-anchor="start">Tab providers</text>
+<text x="428" y="226" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="442" y="226" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Show the tab only where a page</text>
+<text x="442" y="243" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">uses an HPE array LUN (a</text>
+<text x="442" y="260" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">diagnostics setting shows it</text>
+<text x="442" y="277" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">everywhere)</text>
+<text x="428" y="298" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="442" y="298" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Optional: only for roles with View</text>
+<text x="442" y="315" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">HPE Storage tab</text>
+<text x="428" y="336" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="442" y="336" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Render HTML on the appliance: the</text>
+<text x="442" y="353" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">browser never talks to GreenLake</text>
+<rect x="414" y="381" width="279" height="102" rx="8" fill="#ffffff" stroke="#1c7a5c" stroke-width="1.2"/>
+<text x="428" y="410" font-size="15" font-weight="bold" fill="#1c7a5c" text-anchor="start">MorpheusReader</text>
+<text x="428" y="433" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="442" y="433" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">A cluster&#x27;s hosts, datastores and</text>
+<text x="442" y="450" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">VMs, read at most once a minute</text>
+<text x="442" y="467" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">and shared by its tabs</text>
+<rect x="707" y="174" width="279" height="161" rx="8" fill="#ffffff" stroke="#1c7a5c" stroke-width="1.2"/>
+<text x="721" y="203" font-size="15" font-weight="bold" fill="#1c7a5c" text-anchor="start">DsccIndex (background)</text>
+<text x="721" y="226" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="735" y="226" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Every storage system, its capacity</text>
+<text x="735" y="243" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">and health, and every volume</text>
+<text x="721" y="264" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="735" y="264" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">500 per page; refreshed every 5</text>
+<text x="735" y="281" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">minutes while tabs are in use</text>
+<text x="721" y="302" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="735" y="302" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Tabs never wait on DSCC; on rate</text>
+<text x="735" y="319" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">limits it waits as DSCC asks</text>
+<rect x="707" y="347" width="279" height="102" rx="8" fill="#ffffff" stroke="#1c7a5c" stroke-width="1.2"/>
+<text x="721" y="376" font-size="15" font-weight="bold" fill="#1c7a5c" text-anchor="start">StorageMap + WwnMatcher</text>
+<text x="721" y="399" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="735" y="399" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Reduce each LUN to one device id</text>
+<text x="735" y="416" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">and join datastores, disks and</text>
+<text x="735" y="433" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">hosts to array volumes</text>
+<rect x="1084" y="174" width="278" height="140" rx="8" fill="#ffffff" stroke="#a35f00" stroke-width="1.2"/>
+<text x="1098" y="203" font-size="15" font-weight="bold" fill="#a35f00" text-anchor="start">Sign-in (OAuth2)</text>
+<text x="1098" y="226" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="1112" y="226" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Workspace token issuer first;</text>
+<text x="1112" y="243" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">legacy GreenLake sign-in as</text>
+<text x="1112" y="260" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">fallback</text>
+<text x="1098" y="281" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="1112" y="281" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Token reused until a minute before</text>
+<text x="1112" y="298" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">it expires</text>
+<rect x="1084" y="326" width="278" height="121" rx="8" fill="#ffffff" stroke="#3f7a1d" stroke-width="1.2"/>
+<text x="1098" y="355" font-size="15" font-weight="bold" fill="#3f7a1d" text-anchor="start">Data Services (DSCC) API</text>
+<text x="1098" y="378" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">•</text>
+<text x="1112" y="378" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Storage systems, capacity, health,</text>
+<text x="1112" y="395" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">volumes: GET only</text>
+<text x="1098" y="415" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">3PAR · Primera · Alletra 9000 · Alletra</text>
+<text x="1098" y="431" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">MP B10000 · Nimble · Alletra 5000/6000</text>
+<rect x="414" y="558" width="572" height="112" rx="8" fill="#ffffff" stroke="#57606a" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="428" y="582" font-size="15" font-weight="bold" fill="#57606a" text-anchor="start">Plugin settings (stored on the appliance)</text>
+<text x="428" y="605" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">GreenLake region · API client ID and secret · workspace ID · optional proxy ·</text>
+<text x="428" y="622" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">&quot;Only show to roles with the dscc-morpheus permission&quot;. The secret never goes</text>
+<text x="428" y="639" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">to a browser; Morpheus admins who can edit plugins can see it.</text>
+<text x="38" y="650" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">Each page shows only the arrays and volumes</text>
+<text x="38" y="666" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">behind its own LUNs.</text>
+<text x="1084" y="650" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">Use a dedicated GreenLake account with a</text>
+<text x="1084" y="666" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">read-only Data Services role.</text>
+<line x1="334" y1="248" x2="396" y2="248" stroke="#2a6bb8" stroke-width="2" marker-end="url(#a2a6bb8)" marker-start="url(#a2a6bb8)"/>
+<text x="365.0" y="222" font-size="12" font-weight="bold" fill="#2a6bb8" text-anchor="middle">tab</text>
+<text x="365.0" y="237" font-size="12" font-weight="bold" fill="#2a6bb8" text-anchor="middle">HTML</text>
+<line x1="1004" y1="248" x2="1066" y2="248" stroke="#a35f00" stroke-width="2" marker-end="url(#aa35f00)"/>
+<text x="1035.0" y="222" font-size="12" font-weight="bold" fill="#a35f00" text-anchor="middle">token</text>
+<text x="1035.0" y="237" font-size="12" font-weight="bold" fill="#a35f00" text-anchor="middle">(HTTPS)</text>
+<line x1="1004" y1="418" x2="1066" y2="418" stroke="#3f7a1d" stroke-width="2" marker-end="url(#a3f7a1d)" marker-start="url(#a3f7a1d)"/>
+<text x="1035.0" y="392" font-size="12" font-weight="bold" fill="#3f7a1d" text-anchor="middle">GET,</text>
+<text x="1035.0" y="407" font-size="12" font-weight="bold" fill="#3f7a1d" text-anchor="middle">5 min</text>
+<text x="700.0" y="728" font-size="22" font-weight="bold" fill="#1b1f24" text-anchor="middle">What happens, step by step</text>
+<rect x="24.0" y="750" width="326.0" height="233" rx="12" fill="#eef7e6" stroke="#3f7a1d" stroke-width="2"/>
+<text x="38.0" y="779" font-size="15" font-weight="bold" fill="#3f7a1d" text-anchor="start">A.  Reading DSCC</text>
+<text x="38.0" y="802" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">1.</text>
+<text x="52.0" y="802" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">The appliance signs in to the workspace&#x27;s</text>
+<text x="52.0" y="819" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">token issuer with the API client.</text>
+<text x="38.0" y="840" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">2.</text>
+<text x="52.0" y="840" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">It reads every storage system and volume,</text>
+<text x="52.0" y="857" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">page by page, into an in-memory index.</text>
+<text x="38.0" y="878" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">3.</text>
+<text x="52.0" y="878" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Every 5 minutes, while someone uses the</text>
+<text x="52.0" y="895" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">tabs, it reads again.</text>
+<text x="38.0" y="915" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">If one array&#x27;s volumes can&#x27;t be read, the last</text>
+<text x="38.0" y="931" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">good read stays, with a note.</text>
+<rect x="366.0" y="750" width="326.0" height="233" rx="12" fill="#eaf2fc" stroke="#2a6bb8" stroke-width="2"/>
+<text x="380.0" y="779" font-size="15" font-weight="bold" fill="#2a6bb8" text-anchor="start">B.  Opening a tab</text>
+<text x="380.0" y="802" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">1.</text>
+<text x="394.0" y="802" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Morpheus asks whether to show the tab:</text>
+<text x="394.0" y="819" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">does this page use an HPE array LUN?</text>
+<text x="380.0" y="840" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">2.</text>
+<text x="394.0" y="840" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">The plugin reads the Morpheus records</text>
+<text x="394.0" y="857" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">once (shared for a minute per cluster).</text>
+<text x="380.0" y="878" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">3.</text>
+<text x="394.0" y="878" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">It joins them to the index and renders</text>
+<text x="394.0" y="895" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">the tab. It never waits on DSCC.</text>
+<text x="380.0" y="915" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">Right after a restart the tab says it&#x27;s still</text>
+<text x="380.0" y="931" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">reading.</text>
+<rect x="708.0" y="750" width="326.0" height="233" rx="12" fill="#ecf6f2" stroke="#1c7a5c" stroke-width="2"/>
+<text x="722.0" y="779" font-size="15" font-weight="bold" fill="#1c7a5c" text-anchor="start">C.  Matching a LUN</text>
+<text x="722.0" y="802" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">1.</text>
+<text x="736.0" y="802" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Host multipath device or GFS2 block</text>
+<text x="736.0" y="819" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">device: /dev/mapper/3&lt;WWN&gt; or</text>
+<text x="736.0" y="836" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">/dev/mapper/2&lt;serial&gt;.</text>
+<text x="722.0" y="857" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">2.</text>
+<text x="736.0" y="857" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">Alletra B10000 Integration disk: the WWN</text>
+<text x="736.0" y="874" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">itself.</text>
+<text x="722.0" y="895" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">3.</text>
+<text x="736.0" y="895" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">DSCC volume: wwn (3PAR family, Alletra</text>
+<text x="736.0" y="912" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">MP) or serial_number (Nimble family).</text>
+<text x="722.0" y="933" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">4.</text>
+<text x="736.0" y="933" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">All reduce to one device id. Disks on NFS</text>
+<text x="736.0" y="950" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">or local datastores are never shown as</text>
+<text x="736.0" y="967" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">array disks.</text>
+<rect x="1050.0" y="750" width="326.0" height="233" rx="12" fill="#fff5e1" stroke="#a35f00" stroke-width="2"/>
+<text x="1064.0" y="779" font-size="15" font-weight="bold" fill="#a35f00" text-anchor="start">D.  What it never does</text>
+<text x="1064.0" y="802" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">✗</text>
+<text x="1078.0" y="802" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">No writes to DSCC or Morpheus</text>
+<text x="1064.0" y="823" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">✗</text>
+<text x="1078.0" y="823" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">No agents, SSH or commands on hosts</text>
+<text x="1064.0" y="844" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">✗</text>
+<text x="1078.0" y="844" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">No array passwords</text>
+<text x="1064.0" y="865" font-size="13" font-weight="bold" fill="#1b1f24" text-anchor="start">✗</text>
+<text x="1078.0" y="865" font-size="13" font-weight="normal" fill="#1b1f24" text-anchor="start">No web routes; the browser gets HTML only</text>
+<text x="1064.0" y="885" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">Sizes are binary (GiB, TiB); &quot;used on array&quot;</text>
+<text x="1064.0" y="901" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">is physical space after thin provisioning and</text>
+<text x="1064.0" y="917" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">data reduction.</text>
+<text x="24" y="1013" font-size="12" font-weight="normal" fill="#57606a" text-anchor="start">Unofficial community project: not an HPE or Morpheus Data product, and not endorsed or supported by HPE. HPE, GreenLake, Alletra, Primera, 3PAR, Nimble and Morpheus are HPE trademarks. See NOTICE.md.</text>
+</svg>

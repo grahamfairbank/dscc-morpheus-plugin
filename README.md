@@ -1,13 +1,13 @@
 # dscc-morpheus-plugin
 
-**Know exactly which HPE array, volume and LUN sits under every Morpheus datastore, host and VM, and whether it's healthy, right inside Morpheus.** Array health, capacity, data reduction and volume state from HPE GreenLake Data Services, matched to your Morpheus storage by WWN. No storage console, no spreadsheets, no agents, no array passwords.
+**Know exactly which HPE array, volume and LUN sits under every datastore, host and VM in HPE Morpheus, and whether it's healthy, right inside the Morpheus UI.** Array health, capacity, data reduction and volume state from HPE GreenLake Data Services, matched to your Morpheus storage by WWN. No storage console, no spreadsheets, no agents, no array passwords.
 
 [![Latest release](https://img.shields.io/github/v/release/grahamfairbank/dscc-morpheus-plugin?label=release&include_prereleases)](../../releases)
 [![Morpheus 9.0 | 9.1](https://img.shields.io/badge/Morpheus-9.0%20%7C%209.1-0d7b6a)](#requirements)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
-> **Unofficial community project.** Not an HPE or Morpheus Data product. Not developed, endorsed or supported by Hewlett Packard Enterprise. Provided as is, without warranty. HPE, HPE GreenLake, Alletra, Primera, 3PAR, Nimble Storage, Morpheus and VM Essentials are trademarks of Hewlett Packard Enterprise; see [NOTICE.md](NOTICE.md) for trademarks and for every source this project was built from.
+> **Unofficial community project.** Not an HPE or Morpheus Data product. Not developed, endorsed or supported by Hewlett Packard Enterprise. Provided as is, without warranty. HPE, HPE GreenLake, Alletra, Primera, 3PAR, Nimble Storage, HPE Morpheus and HPE Morpheus VM Essentials are trademarks of Hewlett Packard Enterprise; see [NOTICE.md](NOTICE.md) for trademarks and for every source this project was built from.
 
 ![Cluster tab: the arrays serving a cluster, each GFS2 datastore's LUN and array volume, Alletra B10000 Integration disks, and two storage checks](docs/images/tab-cluster.png)
 
@@ -73,7 +73,8 @@ A VM disk that's a file on a GFS2 datastore is matched through the datastore's L
 
 ## Requirements
 
-- HPE Morpheus or HPE VM Essentials **9.0.x or later** (tested on 9.0.1; the test suite also runs against the 9.1 plugin API).
+- HPE Morpheus **9.0.x or later**, including HPE Morpheus VM Essentials (tested on 9.0.1; the test suite also runs against the 9.1 plugin API).
+- Clusters of hypervisor hosts that Morpheus manages, such as HVM (HPE Virtual Machine) clusters, with LUNs on HPE arrays: GFS2 datastores or HPE Alletra B10000 Integration disks.
 - HPE arrays onboarded in an **HPE GreenLake** workspace with **Data Services** (DSCC).
 - A GreenLake **personal API client** (service: *GreenLake platform and most services*) and your **workspace ID**. Ideally the client belongs to a dedicated GreenLake account with a read-only Data Services role, because the plugin acts as that account (see [Security](#security)).
 - Outbound HTTPS from the Morpheus appliance to `<region>.data.cloud.hpe.com`, `global.api.greenlake.hpe.com` and `sso.common.cloud.hpe.com`. A proxy is supported.
@@ -82,7 +83,7 @@ A VM disk that's a file on a GFS2 datastore is matched through the datastore's L
 
 Use the prebuilt jar from the [Releases](../../releases) page. There's no need to build anything.
 
-**One jar, `dscc-morpheus-plugin-<version>.jar`, works on Morpheus / VM Essentials 9.0.x and later.** It's compiled against the oldest supported Plugin API (1.4.1, Morpheus 9.0), and its whole test suite also runs against Plugin API 1.5.0 (Morpheus 9.1).
+**One jar, `dscc-morpheus-plugin-<version>.jar`, works on Morpheus 9.0.x and later.** It's compiled against the oldest supported Plugin API (1.4.1, Morpheus 9.0), and its whole test suite also runs against Plugin API 1.5.0 (Morpheus 9.1).
 
 Each release includes `SHA256SUMS`. Check the download with `sha256sum -c SHA256SUMS`.
 
@@ -114,6 +115,8 @@ The plugin uses **one GreenLake API client for the whole Morpheus appliance**: e
 To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## How it works
+
+![How dscc-morpheus-plugin works: the browser, the plugin inside the Morpheus appliance, and HPE GreenLake Data Services](docs/images/how-it-works.svg)
 
 - **Only the Morpheus appliance talks to GreenLake,** over outbound HTTPS with one OAuth2 API client. The browser gets HTML rendered on the appliance.
 - **Sign-in:** with a workspace ID, the plugin signs in through the workspace's own token issuer first, and uses the legacy GreenLake sign-in only as a fallback. Tokens are reused until a minute before they expire.
@@ -156,7 +159,7 @@ The tab templates are generated: edit `tools/templates/*.txt`, then run `tools/t
 
 This plugin was written from scratch, using HPE's public documentation and the Morpheus plugin API as references, and follows the architecture of its sibling project [com-morpheus-plugin](https://github.com/grahamfairbank/com-morpheus-plugin). It is an independent community project, not an HPE product, and isn't supported by HPE. **[NOTICE.md](NOTICE.md)** lists every source, its license and exactly how it was used, how the test data and screenshots were made, and the full trademark notices.
 
-HPE, HPE GreenLake, Data Services Cloud Console (DSCC), HPE Alletra, HPE Alletra Storage MP, HPE Primera, HPE 3PAR, HPE Nimble Storage, HPE Compute Ops Management and HPE Morpheus (including HPE VM Essentials) are trademarks of Hewlett Packard Enterprise or its affiliates, used here only to describe what the plugin works with.
+HPE, HPE GreenLake, Data Services Cloud Console (DSCC), HPE Alletra, HPE Alletra Storage MP, HPE Primera, HPE 3PAR, HPE Nimble Storage, HPE Compute Ops Management and HPE Morpheus (including HPE Morpheus VM Essentials) are trademarks of Hewlett Packard Enterprise or its affiliates, used here only to describe what the plugin works with.
 
 ## License
 

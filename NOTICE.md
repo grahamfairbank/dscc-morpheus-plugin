@@ -46,7 +46,7 @@ This project refers to the following names only to describe what it works with (
 - **HPE Primera** and **Primera**
 - **HPE 3PAR**, **3PAR** and **HPE 3PAR StoreServ**
 - **HPE Nimble Storage** and **Nimble Storage**
-- **HPE Morpheus**, **Morpheus**, **HPE Morpheus VM Essentials** and **HPE VM Essentials** (abbreviated "VME" in this project)
+- **HPE Morpheus**, **Morpheus**, **HPE Morpheus VM Essentials** and the other HPE Morpheus editions
 
 These are trademarks or registered trademarks of Hewlett Packard Enterprise Company, or of Morpheus Data, LLC (an HPE company), in the United States and other countries.
 

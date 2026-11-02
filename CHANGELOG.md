@@ -2,7 +2,7 @@
 
 ## 0.2.0 (2026-10-31)
 
-Tested on Morpheus 9.0.1.
+Tested on HPE Morpheus 9.0.1.
 
 Faster pages. Measured on a Morpheus 9.0.1 appliance, Morpheus's own reads cost the most (about 1 s per server, 3 s per instance, 10 to 13 s to list a cluster's VMs), and Morpheus runs every tab's check and the tab itself on each page load, whether or not the tab is opened.
 

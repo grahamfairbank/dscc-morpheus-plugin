@@ -10,7 +10,7 @@ Use GitHub's private vulnerability reporting: on this repository, open **Securit
 
 Please include:
 
-- the plugin version and your Morpheus version;
+- the plugin version and your HPE Morpheus version and edition;
 - what you found and how to reproduce it;
 - what an attacker could do with it, as you understand it.
 

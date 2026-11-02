@@ -2,13 +2,13 @@
 
 > Unofficial community plugin, not an HPE product and not supported by HPE. See [NOTICE.md](../NOTICE.md).
 
-This guide assumes you've never installed a Morpheus plugin or created a GreenLake API client before. Every step says where to click and what you should see. Allow about 20 minutes.
+This guide assumes you've never installed an HPE Morpheus plugin or created a GreenLake API client before. Every step says where to click and what you should see. Allow about 20 minutes.
 
 ## Before you start
 
 You need:
 
-- **Morpheus admin access.** HPE Morpheus or HPE VM Essentials **9.0.x or later**, and a login that can open **Administration → Integrations → Plugins**.
+- **Morpheus admin access.** HPE Morpheus **9.0.x or later** (including HPE Morpheus VM Essentials), and a login that can open **Administration → Integrations → Plugins**.
 - **Access to your HPE GreenLake workspace**, the one where your HPE arrays are onboarded in **Data Services** (DSCC), with permission to create API clients.
 - **Network access from the Morpheus appliance** (the manager, not your laptop) to these addresses on port 443:
   - `<region>.data.cloud.hpe.com` (for example `us1.data.cloud.hpe.com`)
